@@ -1,0 +1,19 @@
+services:
+  mcp-proxy:
+    build: .
+    container_name: mcp-proxy
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./mcp_config.yaml:/app/mcp_config.yaml  # 設定ファイルをホストから上書き可能にする
+      - ./mcp_servers:/app/mcp_servers
+    restart: always
+    environment:
+      - TZ=Asia/Tokyo
+      - PYTHONUNBUFFERED=1
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge

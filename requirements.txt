@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+httpx
+PyYAML
+mcp[cli]>=1.2.0

@@ -1,0 +1,31 @@
+# ビルドステージ
+FROM python:3.13-slim AS builder
+
+# uvのインストール
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# 依存関係のコピーとインストール
+# ※ requirements.txt または pyproject.toml がある場合
+COPY requirements.txt .
+RUN uv pip install --no-cache --system -r requirements.txt
+
+# 実行ステージ
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# ビルドステージからインストール済みのパッケージをコピー（system installの場合）
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# ソースコードと設定ファイルのコピー
+COPY mcp_proxy_server.py .
+COPY mcp_config.yaml .
+
+# ポートの開放 (プロキシサーバー用)
+EXPOSE 8010
+
+# サーバーの起動
+CMD ["python", "mcp_proxy_server.py"]
