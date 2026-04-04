@@ -1,0 +1,32 @@
+mcp_servers:
+# 1. StreamableHttpTransport を使用
+  news_server:
+    transport: "http"
+    url: "http://192.168.1.1:9000/mcp"
+
+# 1. StreamableHttpTransport を使用
+  weatherserver_server:
+    transport: "http"
+    url: "http://192.168.1.1:9001/mcp"
+
+# 1. StreamableHttpTransport を使用
+  finance_server:
+    transport: "http"
+    url: "http://192.168.1.1:9002/mcp"
+
+# 1. StreamableHttpTransport を使用
+  mcp-searxng:
+    transport: "http"
+    url: "http://192.168.1.1:9003/mcp"
+
+# # 2. 標準的な SSE クライアントを使用
+#   legacy_sse_mcp:
+#     transport: "sse"
+#     url: "http://192.168.1.1:9004/sse"
+
+#  # 3. ローカルプロセスを起動 (NewsCompressorなど)
+#   news_compressor:
+#     transport: "stdio"
+#     command: "python"
+#     args: 
+#       - "/app/mcp_servers/news_compressor.py"
