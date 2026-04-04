@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from fastapi import FastAPI, Request
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 from mcp.client.sse import sse_client
 
 # ==========================================
@@ -37,7 +37,7 @@ async def connect_and_register(server_id, conf):
     try:
         if transport_type == "http":
             # 1. 従来の HTTP ストリーミング (streamable-http)
-            transport_cm = streamablehttp_client(conf["url"])
+            transport_cm = streamable_http_client(conf["url"])
             read, write, _ = await stack.enter_async_context(transport_cm)
             
         elif transport_type == "sse":
