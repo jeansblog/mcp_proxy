@@ -1,2 +1,6 @@
 /.venv
 /mcp_config.yaml
+mcp_servers/chroma_db/chroma.sqlite3
+mcp_servers/ai_partner_memory.db
+mcp_servers/credentials.json
+mcp_servers/token.json
