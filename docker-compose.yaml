@@ -6,11 +6,18 @@ services:
       - "8010:8010"
     volumes:
       - ./mcp_config.yaml:/app/mcp_config.yaml  # 設定ファイルをホストから上書き可能にする
+      - ./mcp_config.json:/app/mcp_config.json
       - ./mcp_servers:/app/mcp_servers
     restart: always
+    env_file:
+      - .env
     environment:
       - TZ=Asia/Tokyo
       - PYTHONUNBUFFERED=1
+      - MCP_CONFIG=/app/mcp_config.json
+    command: sh -c "python mcp_pipe.py & python mcp_proxy_server.py"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - mcp-network
 

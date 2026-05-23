@@ -3,7 +3,14 @@ uvicorn
 httpx
 PyYAML
 mcp[cli]>=1.2.0
+mcp-proxy>=0.11.0
 paho-mqtt>=1.6.1
 chromadb
+pymysql
 google-auth-oauthlib
 google-api-python-client
+websockets
+python-dotenv
+mcp>=1.20.0
+pydantic>=2.12.3
+fastmcp>=2.13.0.2

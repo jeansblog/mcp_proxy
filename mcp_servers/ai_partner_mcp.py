@@ -1,6 +1,7 @@
 import os
-import sqlite3
 import datetime
+import pymysql
+import yaml
 from mcp.server.fastmcp import FastMCP
 import chromadb
 
@@ -11,25 +12,51 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 # --- 設定 ---
-DB_PATH = "ai_partner_memory.db"
-CHROMA_PATH = "./chroma_db"
-SCOPES = ['https://www.googleapis.com/auth/calendar'] # 読み書き
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, "db_config.yaml")
+SCOPES = ["https://www.googleapis.com/auth/calendar"]  # 読み書き
+
+
+def load_db_config():
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f) or {}
+
+    mysql_config = config.get("mysql")
+    if not mysql_config:
+        raise ValueError("db_config.yaml に mysql 設定がありません。")
+
+    mysql_config.setdefault("charset", "utf8mb4")
+    # コンテナ実行時に環境変数で上書き可能にする
+    mysql_config["host"] = os.getenv("DB_HOST", mysql_config.get("host", "localhost"))
+    mysql_config["port"] = int(os.getenv("DB_PORT", mysql_config.get("port", 3306)))
+    mysql_config["user"] = os.getenv("DB_USER", mysql_config.get("user", "root"))
+    mysql_config["password"] = os.getenv("DB_PASSWORD", mysql_config.get("password", ""))
+    mysql_config["database"] = os.getenv("DB_NAME", mysql_config.get("database", ""))
+    mysql_config["cursorclass"] = pymysql.cursors.Cursor
+    mysql_config["autocommit"] = True
+
+    chroma_path = config.get("chroma", {}).get("path", "./chroma_db")
+    return mysql_config, chroma_path
+
+
+MYSQL_CONFIG, CHROMA_PATH = load_db_config()
 
 mcp = FastMCP("AI-Partner-Memory-Calendar")
 
 # --- データベース初期化 ---
 def init_db():
-    # SQLite
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
+    # MySQL
+    with pymysql.connect(**MYSQL_CONFIG) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
             CREATE TABLE IF NOT EXISTS memories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
                 timestamp DATETIME,
                 content TEXT,
                 reflection_core TEXT,
                 reflection_kind TEXT,
-                sentiment_score REAL,
-                event_id TEXT
+                sentiment_score DOUBLE,
+                event_id VARCHAR(255)
             )
         """)
     # ChromaDB
@@ -38,10 +65,6 @@ def init_db():
 
 collection = init_db()
 
-# コードの冒頭（設定部分）を以下のように書き換えてみてください
-
-# ファイルの場所をこのスクリプトと同じ場所に固定する
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDENTIALS_PATH = os.path.join(BASE_DIR, 'credentials.json')
 TOKEN_PATH = os.path.join(BASE_DIR, 'token.json')
 
@@ -77,11 +100,12 @@ def store_memory(content: str, reflection_core: str, reflection_kind: str, senti
     """事実と、AI独自の『芯』と『優しさ』を記憶に刻みます。"""
     now = datetime.datetime.now().isoformat()
     
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            "INSERT INTO memories (timestamp, content, reflection_core, reflection_kind, sentiment_score, event_id) VALUES (?, ?, ?, ?, ?, ?)",
-            (now, content, reflection_core, reflection_kind, sentiment, event_id)
-        )
+    with pymysql.connect(**MYSQL_CONFIG) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO memories (timestamp, content, reflection_core, reflection_kind, sentiment_score, event_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                (now, content, reflection_core, reflection_kind, sentiment, event_id),
+            )
     
     combined_text = f"事実: {content}\n私の芯: {reflection_core}\n優しさ: {reflection_kind}"
     collection.add(
@@ -148,3 +172,9 @@ def create_event_with_reflection(summary: str, start_iso: str, end_iso: str, ref
 
 if __name__ == "__main__":
     mcp.run()
+
+    # # 認証テストだけを行うコード
+    # print("Googleカレンダーの接続テストを開始します...")
+    # service = get_calendar_service()
+    # print("認証成功！token.jsonが作成されました。")
+    # # 確認が終わったら、本来の mcp.run() に戻すか終了してOK
